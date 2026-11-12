@@ -28,6 +28,13 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libosmesa6
           echo "VTK_DEFAULT_OPENGL_WINDOW=vtkOSOpenGLRenderWindow" >> "$GITHUB_ENV"
+      # GPU-less Windows runners have no usable OpenGL: LocalView's Render() segfaults.
+      # Deploy Mesa (llvmpipe + OSMesa) system-wide and point VTK at vtkOSOpenGLRenderWindow.
+      - name: Headless OpenGL (Windows)
+        if: runner.os == 'Windows'
+        uses: pyvista/setup-headless-display-action@v5
+        with:
+          pyvista: false
       - run: uvx nox -s "tests-${{ matrix.python }}"
 
   release:
