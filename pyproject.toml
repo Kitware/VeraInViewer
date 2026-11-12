@@ -1,6 +1,6 @@
 [project]
 name = "vera-in-viewer"
-version = "0.1.0"
+version = "1.0.0"
 description = "trame + VTK.wasm viewer for VERAin reactor core descriptions (port of VeraInView's 3D core view)"
 readme = "README.md"
 license = "BSD-3-Clause"
