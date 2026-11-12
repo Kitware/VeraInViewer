@@ -57,6 +57,32 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["PLC0415"]
 
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+commit_message = "chore(release): {version}"
+# Keep uv.lock in sync with the bumped version so `uv sync --locked` keeps working.
+build_command = """
+    python -m pip install -q uv
+    uv lock --upgrade-package vera-in-viewer
+    git add uv.lock
+    uv build
+"""
+dist_path = "dist/"
+upload_to_vcs_release = true
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = ["^chore\\(release\\):"]
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+
+[tool.semantic_release.commit_parser_options]
+parse_squash_commits = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers"]
