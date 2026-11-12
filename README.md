@@ -4,6 +4,8 @@ A Python port of the **3D core visualization** of [VeraInView](https://casl.gith
 [trame](https://kitware.github.io/trame/), [VTK](https://vtk.org) and
 [trame-vtklocal](https://github.com/Kitware/trame-vtklocal).
 
+![VeraInViewer started with uvx vera-in-viewer](https://raw.githubusercontent.com/Kitware/VeraInViewer/main/vera-in-viewer.png)
+
 The scene is built with VTK on the server and mirrored in the browser with VTK.wasm, so all
 rendering and interaction happen client side: only geometry and state changes go over the wire.
 
