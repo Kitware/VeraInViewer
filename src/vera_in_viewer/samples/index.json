@@ -1,0 +1,24 @@
+[
+  {
+    "name": "p6.xml.gold",
+    "title": "CASL AMA Problem 6 - Single 17x17 Assembly @ HFP - Public",
+    "info": [
+      "1x1 core",
+      "1,734 pin segments",
+      "6 materials",
+      "1 state"
+    ],
+    "preview": "previews/p6.png"
+  },
+  {
+    "name": "p8.xml.gold",
+    "title": "CASL AMA Problem 8 - Watts Bar Unit 1 Cycle 1 Power Escalation - Public",
+    "info": [
+      "15x15 core",
+      "349,384 pin segments",
+      "12 materials",
+      "49 states"
+    ],
+    "preview": "previews/p8.png"
+  }
+]

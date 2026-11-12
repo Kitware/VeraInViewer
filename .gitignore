@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Tooling
+.nox/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# trame-vtklocal debug snapshots
+snapshot-*
+
+.DS_Store

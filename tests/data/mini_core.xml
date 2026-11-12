@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Minimal 3x3 core with a cross shape, 2x2 pin assemblies and one control bank -->
+<ParameterList name="CASEID">
+  <Parameter name="case_id" type="string" value="Mini core"/>
+  <ParameterList name="STATES">
+    <ParameterList name="State_2">
+      <Parameter name="bank_labels" type="Array(string)" value="{A}"/>
+      <Parameter name="bank_pos" type="Array(int)" value="{5}"/>
+      <Parameter name="power" type="double" value="50.0"/>
+    </ParameterList>
+    <ParameterList name="State_1">
+      <Parameter name="bank_labels" type="Array(string)" value="{A}"/>
+      <Parameter name="bank_pos" type="Array(int)" value="{10}"/>
+      <Parameter name="feedback" type="bool" value="True"/>
+      <Parameter name="title" type="string" value="Start"/>
+    </ParameterList>
+  </ParameterList>
+  <ParameterList name="CORE">
+    <ParameterList name="Materials">
+      <ParameterList name="Material_inc">
+        <Parameter name="density" type="double" value="8.19"/>
+        <Parameter name="key_name" type="string" value="inc"/>
+      </ParameterList>
+    </ParameterList>
+    <Parameter name="apitch" type="double" value="3.0"/>
+    <Parameter name="core_size" type="int" value="3"/>
+    <Parameter name="height" type="double" value="12.0"/>
+    <Parameter name="shape" type="Array(int)" value="{0,1,0,1,1,1,0,1,0}"/>
+    <Parameter name="assm_map" type="Array(string)" value="{1,1,1,1,1}"/>
+    <Parameter name="crd_map" type="Array(string)" value="{-,-,1,-,-}"/>
+    <Parameter name="crd_bank" type="Array(string)" value="{-,-,A,-,-}"/>
+    <Parameter name="baffle_gap" type="double" value="0.1"/>
+    <Parameter name="baffle_mat" type="string" value="ss"/>
+    <Parameter name="baffle_thick" type="double" value="0.2"/>
+    <Parameter name="vessel_mats" type="Array(string)" value="{mod,ss}"/>
+    <Parameter name="vessel_radii" type="Array(double)" value="{6.0,6.5}"/>
+    <Parameter name="lower_mat" type="string" value="ss"/>
+    <Parameter name="lower_thick" type="double" value="1.0"/>
+    <Parameter name="upper_mat" type="string" value="ss"/>
+    <Parameter name="upper_thick" type="double" value="1.5"/>
+  </ParameterList>
+  <ParameterList name="ASSEMBLIES">
+    <ParameterList name="Assembly_1">
+      <Parameter name="axial_elevations" type="Array(double)" value="{0.0,2.0,10.0}"/>
+      <Parameter name="axial_labels" type="Array(string)" value="{PLUG,FUEL}"/>
+      <Parameter name="grid_elev" type="Array(double)" value="{5.0}"/>
+      <Parameter name="grid_map" type="Array(string)" value="{MID}"/>
+      <Parameter name="label" type="string" value="1"/>
+      <Parameter name="num_pins" type="int" value="2"/>
+      <Parameter name="ppitch" type="double" value="1.4"/>
+      <ParameterList name="Cells">
+        <ParameterList name="Cell_1">
+          <Parameter name="label" type="string" value="1"/>
+          <Parameter name="mats" type="Array(string)" value="{U31,he,zirc4}"/>
+          <Parameter name="num_rings" type="int" value="3"/>
+          <Parameter name="radii" type="Array(double)" value="{0.4,0.42,0.48}"/>
+        </ParameterList>
+        <ParameterList name="Cell_2">
+          <Parameter name="label" type="string" value="2"/>
+          <Parameter name="mats" type="Array(string)" value="{mod,zirc4}"/>
+          <Parameter name="num_rings" type="int" value="2"/>
+          <Parameter name="radii" type="Array(double)" value="{0.56,0.6}"/>
+        </ParameterList>
+        <ParameterList name="Cell_3">
+          <Parameter name="label" type="string" value="3"/>
+          <Parameter name="mats" type="Array(string)" value="{zirc4}"/>
+          <Parameter name="num_rings" type="int" value="1"/>
+          <Parameter name="radii" type="Array(double)" value="{0.48}"/>
+        </ParameterList>
+      </ParameterList>
+      <ParameterList name="CellMaps">
+        <ParameterList name="CellMap_FUEL">
+          <Parameter name="cell_map" type="Array(string)" value="{1,1,1,2}"/>
+          <Parameter name="label" type="string" value="FUEL"/>
+        </ParameterList>
+        <ParameterList name="CellMap_PLUG">
+          <Parameter name="cell_map" type="Array(string)" value="{3,3,3,2}"/>
+          <Parameter name="label" type="string" value="PLUG"/>
+        </ParameterList>
+      </ParameterList>
+      <ParameterList name="SpacerGrids">
+        <ParameterList name="Grid_MID">
+          <Parameter name="height" type="double" value="1.0"/>
+          <Parameter name="label" type="string" value="MID"/>
+          <Parameter name="mass" type="double" value="10"/>
+          <Parameter name="material" type="string" value="inc"/>
+        </ParameterList>
+      </ParameterList>
+    </ParameterList>
+  </ParameterList>
+  <ParameterList name="CONTROLS">
+    <ParameterList name="Control_1">
+      <Parameter name="axial_elevations" type="Array(double)" value="{4.0,11.0}"/>
+      <Parameter name="axial_labels" type="Array(string)" value="{ABS}"/>
+      <Parameter name="label" type="string" value="1"/>
+      <Parameter name="maxstep" type="int" value="20"/>
+      <Parameter name="num_pins" type="int" value="2"/>
+      <Parameter name="stroke" type="double" value="8.0"/>
+      <ParameterList name="Cells">
+        <ParameterList name="Cell_B">
+          <Parameter name="label" type="string" value="B"/>
+          <Parameter name="mats" type="Array(string)" value="{b4c,ss}"/>
+          <Parameter name="num_rings" type="int" value="2"/>
+          <Parameter name="radii" type="Array(double)" value="{0.37,0.48}"/>
+        </ParameterList>
+      </ParameterList>
+      <ParameterList name="CellMaps">
+        <ParameterList name="CellMap_ABS">
+          <Parameter name="cell_map" type="Array(string)" value="{-,-,-,B}"/>
+          <Parameter name="label" type="string" value="ABS"/>
+        </ParameterList>
+      </ParameterList>
+    </ParameterList>
+  </ParameterList>
+</ParameterList>

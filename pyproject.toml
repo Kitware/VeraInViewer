@@ -1,0 +1,62 @@
+[project]
+name = "vera-in-viewer"
+version = "0.1.0"
+description = "trame + VTK.wasm viewer for VERAin reactor core descriptions (port of VeraInView's 3D core view)"
+readme = "README.md"
+license = "BSD-3-Clause"
+authors = [
+    { name = "Sebastien Jourdain", email = "sebastien.jourdain@kitware.com" }
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Framework :: trame",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "numpy>=1.26",
+    "packaging>=23",
+    "trame>=3.12",
+    "trame-vtklocal>=1.7.1",
+    "trame-vuetify>=3.3.0",
+    "vtk>=9.7",
+]
+
+[project.scripts]
+vera-in-viewer = "vera_in_viewer.app:main"
+
+[build-system]
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pre-commit",
+    "ruff",
+    "nox>=2026.8.17",
+    "pytest>=9.1.1",
+    "pytest-cov>=6.0",
+    "ruff>=0.16.10",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PL", "NPY"]
+ignore = [
+    "PLR0912", # too many branches
+    "PLR0913", # too many arguments
+    "PLR0915", # too many statements
+    "PLR2004", # magic values
+    "PLR0917", # too many positional arguments
+    "SIM117",  # nested `with` is the idiomatic way to build trame UIs
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLC0415"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]

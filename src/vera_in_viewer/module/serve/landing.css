@@ -1,0 +1,50 @@
+.vera-landing {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.2)),
+    url(background.jpg) center / cover no-repeat;
+}
+.vera-landing .vera-dropzone {
+  position: absolute;
+  inset: 1.5rem;
+}
+.vera-landing .vera-dropzone .v-input__control,
+.vera-landing .vera-dropzone .v-file-upload-dropzone {
+  height: 100%;
+}
+.vera-landing .vera-dropzone .v-file-upload-dropzone {
+  justify-content: center;
+  padding-bottom: 45vh;
+  background: transparent;
+  border-color: rgba(30, 40, 60, 0.45);
+}
+.vera-landing .vera-files {
+  position: absolute;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(960px, calc(100vw - 6rem));
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.vera-landing .vera-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 240px));
+  justify-content: center;
+  gap: 0.75rem;
+}
+.vera-landing .vera-sample,
+.vera-landing .vera-data {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(6px);
+}
+.vera-landing .vera-sample-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.5em;
+  line-height: 1.25em;
+}
