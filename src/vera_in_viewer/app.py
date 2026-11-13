@@ -13,7 +13,7 @@ from trame.app import TrameApp
 from trame.app.file_upload import ClientFile
 from trame.decorators import change, controller
 from trame.ui.vuetify4 import VAppLayout
-from trame.widgets import html, vtklocal
+from trame.widgets import client, html, vtklocal
 from trame.widgets import vuetify4 as v4
 from vtkmodules.vtkCommonCore import vtkVersion
 
@@ -222,6 +222,7 @@ class VeraInViewer(TrameApp):
                 "resolution": 6,
                 "z_scale": 1.0,
                 "rendering": "webgl",
+                "frame_times": False,
                 "view_2d": False,
                 "parallel": False,
                 "can_screenshot": supports_screenshot(),
@@ -388,6 +389,11 @@ class VeraInViewer(TrameApp):
     def _build_ui(self) -> None:
         self.state.trame__title = "VeraInViewer"
         with VAppLayout(self.server, full_height=True) as self.ui:
+            client.ClientStateChange(
+                value=("frame_times",),
+                trigger_on_create=True,
+                change="window.veraFrameTiming.setEnabled($event)",
+            )
             with v4.VAppBar(v_if="loaded", density="compact", border="b", elevation=0) as toolbar:
                 self._build_toolbar(toolbar)
 
@@ -397,16 +403,31 @@ class VeraInViewer(TrameApp):
                 with v4.VContainer(
                     v_if="loaded", fluid=True, classes="fill-height pa-0", style="position: relative;"
                 ):
-                    vtklocal.LocalView(
+                    view = vtklocal.LocalView(
                         self.scene.render_window,
                         classes="vera-view",
                         ctx_name="view",
+                        ref="vera_view",
                         # config is only read on mount: remount the view to switch backend
                         key=("rendering",),
                         config=("{ rendering }",),
                         progress_enabled=True,
                         end_interaction=(self.on_end_interaction, "[$event]"),
                         updated=self.on_view_updated,
+                    )
+                    # Add browser callbacks alongside LocalView's own lifecycle handlers.
+                    window_id = view.get_wasm_id(self.scene.render_window)
+                    view.v_on = (
+                        "{ ready: () => window.veraFrameTiming.attach("
+                        f"trame.refs.vera_view, {window_id}, rendering),"
+                        " unmount: () => window.veraFrameTiming.detach() }"
+                    )
+                    html.Div(
+                        "Waiting for renders…",
+                        id="vera-frame-times",
+                        v_show="frame_times",
+                        classes="vera-frame-times",
+                        title="Elapsed time between browser VTK render events; not isolated GPU time",
                     )
                     self._build_camera_bar()
                     self._build_side_panels()
@@ -590,6 +611,15 @@ class VeraInViewer(TrameApp):
                 ):
                     v4.VBtn(icon=icon, value=(value,), size="small", title=f"Resolution {value}")
             v4.VDivider(vertical=True, classes="mx-4 my-2")
+            v4.VBtn(
+                "Frame times",
+                prepend_icon="mdi-timer-outline",
+                size="small",
+                variant="text",
+                active=("frame_times",),
+                click="frame_times = !frame_times",
+                title="Show browser VTK render durations",
+            )
             with v4.VBtnToggle(
                 v_model=("rendering",),
                 mandatory=True,

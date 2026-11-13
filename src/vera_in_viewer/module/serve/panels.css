@@ -23,3 +23,17 @@
   min-height: 0;
   overflow-y: auto;
 }
+
+.vera-frame-times {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 2;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font: 12px/1.5 monospace;
+  white-space: pre-line;
+  pointer-events: none;
+}
