@@ -117,16 +117,6 @@ tests/          unit tests and a tiny synthetic core (tests/data/mini_core.xml)
 
 `model.py` is pure Python + numpy, so the reactor description can be reused or tested without VTK.
 
-## Differences from VeraInView
-
-- Only the 3D core view is ported (no 2D maps, cell/assembly views or editor).
-- Assemblies are centered in their pitch (VeraInView offsets them by half a pin pitch).
-- Baffle plates are computed per exposed assembly edge with proper convex/concave corner
-  handling and Y orientation matching the core map, so they never overlap assemblies.
-- Control rods start fully inserted.
-- The LOD/Full switch is replaced by a resolution slider; the default depends on the number of
-  pins (6 sides for full cores like VeraInView's LOD, 24 for small models).
-
 ## Implementation notes
 
 - Cell connectivity is stored in fixed width (`int32`) arrays: `vtkIdTypeArray` is 64-bit on
