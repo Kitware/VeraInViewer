@@ -38,6 +38,10 @@ electron/
 Builds are not cross platform: build on macOS for macOS, on Windows for Windows and on Linux for
 Linux (e.g. a CI matrix).
 
+On each release, the `electron` job of `.github/workflows/ci.yml` builds the installers on Linux,
+macOS and Windows runners and attaches them to the GitHub release (the app version is set from the
+release version).
+
 ## Build
 
 ```bash

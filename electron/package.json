@@ -23,6 +23,7 @@
   "build": {
     "appId": "com.kitware.vera-in-viewer",
     "productName": "VeraInViewer",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "resources"
@@ -58,6 +59,7 @@
       ]
     },
     "nsis": {
+      "artifactName": "${productName}-${version}-${os}-${arch}-setup.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
