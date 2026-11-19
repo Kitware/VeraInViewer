@@ -62,6 +62,13 @@ samples (CASL AMA problems 6 and 8, with a preview of each) or one of the files 
 Once loaded, the toolbar shows the case title, the file name with the core size, pin segment
 and material counts, and a close button to go back to the start page.
 
+## Desktop application
+
+The [`electron`](electron/README.md) directory packages the viewer as a standalone desktop app:
+PyInstaller freezes the Python server (with VTK.wasm, so it works offline) and Electron provides the
+native window. `cd electron && npm install && npm run build` builds the installer for the current
+platform.
+
 ## Development
 
 ```bash
