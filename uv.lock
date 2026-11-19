@@ -2425,6 +2425,25 @@ wheels = [
 ]
 
 [[package]]
+name = "trame-rca"
+version = "2.12.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "packaging" },
+    { name = "pillow" },
+    { name = "trame-client" },
+    { name = "trame-common" },
+    { name = "wslink" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/30/dafb8865657d9d8bcd971490d21a0c635290fda5f4625773f944765a86f2/trame_rca-2.12.0.tar.gz", hash = "sha256:dfc1971532bd2276e4c7e06d74fa70292deadf1861079c244eecd203b714db41", size = 86956, upload-time = "2026-11-12T17:58:28.624Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/ab/091390fd34027dc30d0e53ac1c17cc7d2ca9bcb9a9f7d4c3c11ab50931a0/trame_rca-2.12.0-py3-none-any.whl", hash = "sha256:24af610913aa98a31cac5b72bba662b339a98241a0a218edbf6c8e955ff2fc47", size = 102175, upload-time = "2026-11-12T17:58:26.954Z" },
+]
+
+[[package]]
 name = "trame-server"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2483,6 +2502,7 @@ dependencies = [
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "packaging" },
     { name = "trame" },
+    { name = "trame-rca" },
     { name = "trame-vtklocal" },
     { name = "trame-vuetify" },
     { name = "vtk" },
@@ -2503,6 +2523,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "packaging", specifier = ">=23" },
     { name = "trame", specifier = ">=3.12" },
+    { name = "trame-rca", specifier = ">=2.12.0" },
     { name = "trame-vtklocal", specifier = ">=1.7.1" },
     { name = "trame-vuetify", specifier = ">=3.3.0" },
     { name = "vtk", specifier = ">=9.7" },

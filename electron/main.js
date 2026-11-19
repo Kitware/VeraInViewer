@@ -1,22 +1,21 @@
-// Electron shell for VeraInViewer: starts the frozen trame server on a port picked by the
-// server itself and shows it in a native window. The server lives as long as the app.
+// Electron shell for VeraInViewer: starts the frozen trame server with `--electron` and shows
+// it in a native window. The server renders the 3D view with VTK into a GPU texture shared
+// with this app (trame-rca shared-texture view, see @kitware/trame-rca-electron) instead of
+// rendering it with VTK.wasm in the page. The server lives as long as the window.
 
 const { app, BrowserWindow, dialog, shell } = require("electron");
-const { spawn, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
 const SERVER_NAME = "vera-in-viewer-server";
 const HOST = "127.0.0.1";
-// Printed by server/entry.py once the server listens (trame on_server_ready)
-const READY_LINE = /^electron-server-port=(\d+)$/;
 const STARTUP_TIMEOUT_MS = 120_000; // first start of a fresh bundle can be slow (AV scans, cold cache)
-const LOG_LINES = 200;
 
-let server = null;
+// @kitware/trame-rca-electron is an ES module: loaded with import() once the app is ready
+let trameRca = null;
+let server = null; // { process, close } from launchTrame
 let mainWindow = null;
 let quitting = false;
-const serverLog = [];
 
 // -----------------------------------------------------------------------------
 // Server
@@ -57,96 +56,63 @@ function forwardedArgs() {
   );
 }
 
-function log(line) {
-  console.log(line);
-  serverLog.push(line);
-  serverLog.splice(0, Math.max(0, serverLog.length - LOG_LINES));
-}
-
-// Call onLine for every complete line of a stream (chunks may split lines)
-function readLines(stream, onLine) {
-  let pending = "";
-  stream.setEncoding("utf8");
-  stream.on("data", (chunk) => {
-    const lines = (pending + chunk).split(/\r?\n/);
-    pending = lines.pop();
-    lines.forEach(onLine);
-  });
-  stream.on("end", () => pending && onLine(pending));
-}
-
-// Start the server on a port of its choosing (--port 0) and resolve with that port
-// once it prints the ready line.
-function startServer() {
+// Start the server and load its page in the window once it serves it (trame-rca-electron
+// waits for the server to connect to its texture channel and to send the page URL).
+// The server output goes to the Electron stdout / stderr.
+function startServer(win) {
   return new Promise((resolve, reject) => {
     const { command, args, cwd } = serverCommand();
-    const fullArgs = [
-      ...args,
-      "--server", // do not open a browser
-      "--host",
-      HOST,
-      "--port",
-      "0",
-      "--timeout",
-      "0", // never reap on idle, Electron owns the lifetime
-      ...forwardedArgs(),
-    ];
-    log(`> ${command} ${fullArgs.join(" ")}`);
-
-    let ready = false;
+    let started = false;
     const timer = setTimeout(
       () => reject(new Error(`The server was not ready within ${STARTUP_TIMEOUT_MS / 1000}s.`)),
       STARTUP_TIMEOUT_MS,
     );
+    // launchTrame loads the server page once ready: the window leaves loading.html
+    win.webContents.on("did-navigate", (_event, url) => {
+      if (!started && url.startsWith(`http://${HOST}:`)) {
+        started = true;
+        clearTimeout(timer);
+        resolve();
+      }
+    });
 
-    server = spawn(command, fullArgs, {
+    server = trameRca.launchTrame(win, {
+      command,
+      // launchTrame appends --server --port 0 --trame-electron-port <port>
+      args: [
+        ...args,
+        "--electron", // render with trame-rca into a shared texture, no VTK.wasm
+        "--host",
+        HOST,
+        "--timeout",
+        "0", // never reap on idle, Electron owns the lifetime
+        ...forwardedArgs(),
+      ],
       cwd,
       env: { ...process.env, PYTHONUNBUFFERED: "1" },
-      windowsHide: true,
-    });
-    readLines(server.stdout, (line) => {
-      const match = !ready && line.trim().match(READY_LINE);
-      if (match) {
-        ready = true;
+      onExit: (code, signal, error) => {
+        server = null;
         clearTimeout(timer);
-        resolve(Number(match[1]));
-      } else {
-        log(line);
-      }
-    });
-    readLines(server.stderr, log);
-    server.on("error", (error) => {
-      clearTimeout(timer);
-      reject(new Error(`Could not start the server: ${error.message}`));
-    });
-    server.on("exit", (code, signal) => {
-      server = null;
-      clearTimeout(timer);
-      const message = `The server stopped ${ready ? "unexpectedly" : "during startup"} (code ${code}, signal ${signal}).`;
-      if (ready) {
-        fatal(message);
-      } else {
-        reject(new Error(message));
-      }
+        if (quitting || !mainWindow) {
+          return; // launchTrame stops the server when the window closes
+        }
+        const message = error
+          ? `Could not start the server: ${error.message}`
+          : `The server stopped ${started ? "unexpectedly" : "during startup"} (code ${code}, signal ${signal}).`;
+        if (started) {
+          fatal(message);
+        } else {
+          reject(new Error(message));
+        }
+      },
     });
   });
 }
 
 function stopServer() {
-  if (!server) {
-    return;
-  }
-  const { pid } = server;
+  const current = server;
   server = null;
-  if (process.platform === "win32") {
-    spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true });
-  } else {
-    try {
-      process.kill(pid, "SIGTERM");
-    } catch {
-      // already gone
-    }
-  }
+  current?.close();
 }
 
 // -----------------------------------------------------------------------------
@@ -162,11 +128,11 @@ function createWindow() {
     title: "VeraInViewer",
     backgroundColor: "#1e1e1e",
     show: false,
-    webPreferences: {
+    // trame-rca-electron preload, which draws the shared textures into the page (not sandboxed)
+    webPreferences: trameRca.webPreferences({
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
-    },
+    }),
   });
   mainWindow.setMenuBarVisibility(false);
   mainWindow.once("ready-to-show", () => mainWindow.show());
@@ -199,12 +165,11 @@ function fatal(message) {
   }
   quitting = true;
   stopServer();
-  const details = serverLog.slice(-30).join("\n");
   dialog.showMessageBoxSync({
     type: "error",
     title: "VeraInViewer",
     message,
-    detail: details || undefined,
+    detail: "See the application output for the server logs.",
   });
   app.exit(1);
 }
@@ -221,12 +186,9 @@ app.on("before-quit", () => {
 process.on("exit", stopServer);
 
 app.whenReady().then(async () => {
-  createWindow();
   try {
-    const port = await startServer();
-    if (mainWindow) {
-      await mainWindow.loadURL(`http://${HOST}:${port}/`);
-    }
+    trameRca = await import("@kitware/trame-rca-electron");
+    await startServer(createWindow());
   } catch (error) {
     fatal(error.message);
   }

@@ -2,7 +2,7 @@
   "name": "vera-in-viewer-desktop",
   "productName": "VeraInViewer",
   "version": "1.0.0",
-  "description": "Desktop application for VeraInViewer (trame + VTK.wasm viewer for VERAin reactor cores)",
+  "description": "Desktop application for VeraInViewer (trame viewer for VERAin reactor cores, VTK rendering shared with Electron through trame-rca)",
   "main": "main.js",
   "author": "Kitware",
   "license": "BSD-3-Clause",
@@ -31,6 +31,9 @@
       "main.js",
       "loading.html",
       "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/koffi/**"
     ],
     "extraResources": [
       {
@@ -65,5 +68,8 @@
       ],
       "category": "Science"
     }
+  },
+  "dependencies": {
+    "@kitware/trame-rca-electron": "^0.1.1"
   }
 }

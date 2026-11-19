@@ -2,15 +2,22 @@
 
 Packages VeraInViewer as a standalone desktop application:
 
-- **PyInstaller** freezes the trame server (Python, VTK, trame, VTK.wasm and the built-in samples)
+- **PyInstaller** freezes the trame server (Python, VTK, trame, trame-rca and the built-in samples)
   into a relocatable directory, `server/dist/vera-in-viewer-server`. No Python install is needed
   on the target machine and the app works offline.
 - **Electron** provides the native window: it starts that server, shows a splash screen until
   the server is ready, loads the UI and stops the server when the app quits.
 
-The server is started with `--host 127.0.0.1 --port 0`, so it binds a free port itself. Once it
-listens, trame calls `on_server_ready`, where `server/entry.py` prints
-`electron-server-port=<port>` on stdout: Electron waits for that line and loads `http://127.0.0.1:<port>/`.
+The 3D view does not use VTK.wasm: the server runs with `--electron` and renders with VTK on the
+GPU into textures shared with Electron (a [trame-rca](https://github.com/Kitware/trame-rca)
+`shared-texture` view). [`@kitware/trame-rca-electron`](https://www.npmjs.com/package/@kitware/trame-rca-electron)
+hands them to the page without encoding nor copying frames to the CPU (IOSurface on macOS, NT
+handles on Windows, dma-buf on Linux). Mouse and keyboard events go to the server interactor.
+
+`main.js` starts the server with trame-rca-electron's `launchTrame`, which appends
+`--server --port 0 --trame-electron-port <port>` (the server binds a free port, then connects to the
+texture channel on `<port>` with the `TRAME_ELECTRON_TOKEN` secret it gets in its environment) and
+loads the page once the server sends its URL on that channel.
 
 ```
 electron/
@@ -18,9 +25,9 @@ electron/
 ├── loading.html                    splash screen shown while the server starts
 ├── package.json                    npm scripts + electron-builder configuration
 └── server/
-    ├── entry.py                    frozen entry point (serves the bundled VTK.wasm)
+    ├── entry.py                    frozen entry point
     ├── vera-in-viewer-server.spec  PyInstaller spec
-    └── build.py                    prefetch VTK.wasm, then run PyInstaller
+    └── build.py                    run PyInstaller
 ```
 
 ## Requirements
@@ -39,11 +46,8 @@ npm install
 npm run build          # = npm run build:server && npm run dist
 ```
 
-- `npm run build:server` downloads the VTK.wasm archive (`wasm32/<vtk version>/vtk-wasm.tgz`)
-  matching the installed VTK into the trame-vtklocal package, then runs PyInstaller. That archive
-  is the only VTK.wasm file bundled: the client loads it as a whole, and the app never uses the
-  wasm64 build or the extracted files. The frozen server can be tried on its own:
-  `server/dist/vera-in-viewer-server/vera-in-viewer-server --data ~/cases`.
+- `npm run build:server` runs PyInstaller. trame-vtklocal (and VTK.wasm) is left out of the bundle:
+  the frozen server only works with `--electron`, so it must be started by the Electron app.
 - `npm run dist` builds the installers into `dist/` (macOS: `.dmg` + `.zip`, Windows: NSIS
   installer + `.zip`, Linux: `.AppImage` + `.tar.gz`). `npm run pack` only builds the unpacked
   app, which is faster to test.
@@ -58,15 +62,18 @@ npm run dev # Electron + `uv run --project .. python server/entry.py`: no refree
 Arguments after `--` are forwarded to the server, e.g. `npm start -- --data ~/cases`. The packaged
 app accepts them too: `VeraInViewer.app/Contents/MacOS/VeraInViewer --data ~/cases/core.xml`.
 
-Server output is echoed on the Electron stdout; the last lines are shown in the error dialog
-if the server fails to start or stops.
+Server output goes to the Electron stdout / stderr. An error dialog shows up if the server fails to
+start or stops.
 
 ## Notes
 
-- **VTK version**: the bundled VTK.wasm must match the VTK the server was frozen with. The build
-  uses whatever VTK is in the parent project environment (`uv.lock`); to bundle a VTK nightly (for
-  the screenshot button), install it in that environment first and freeze with
-  `uv run --no-sync --project .. --with pyinstaller python server/build.py`.
+- **Platforms** (trame-rca-electron): Linux needs Electron running under Wayland (X11 is not
+  supported) and `kernel.yama.ptrace_scope` at 1 or less. macOS shares the textures as global
+  IOSurfaces, which does not work in an App Sandbox (so not on the Mac App Store).
+- **koffi**: trame-rca-electron's native dependency is unpacked from the asar archive
+  (`asarUnpack` in `package.json`).
+- **Protocol**: the `trame-rca` Python package and the `@kitware/trame-rca-electron` npm package
+  speak a versioned protocol: upgrade them together.
 - **Icons**: drop `icon.icns` (macOS), `icon.ico` (Windows) and `icon.png` (512x512, Linux) in
   `electron/resources/` to replace the default Electron icon.
 - **Code signing**: electron-builder signs the app (including the frozen server) when signing

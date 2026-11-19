@@ -36,6 +36,11 @@ uv run vera-in-viewer --data ~/cases/core.xml  # loaded right away
 A browser tab opens automatically. Useful trame options: `--port 1234`, `--server` (do not open a
 browser), `--host 0.0.0.0`.
 
+`--electron` renders the 3D view on the server with VTK, into a GPU texture shared with an
+Electron window ([trame-rca](https://github.com/Kitware/trame-rca) shared-texture view), instead
+of using VTK.wasm in the browser. It only works when the server is started by
+`@kitware/trame-rca-electron`, as the [desktop application](#desktop-application) does.
+
 ### Interaction
 
 In 3D, left drag rotates, right drag (or scroll) zooms, shift + left drag (or middle drag)
@@ -47,8 +52,9 @@ bar at the top right of the 3D view holds the camera controls:
   VeraInView) where left drag pans and right drag or scroll zooms (no rotation)
 - perspective / parallel projection (cone / cylinder icons)
 - top, side and isometric views
-- download a PNG screenshot of the 3D view, read back from VTK.wasm in the browser. This needs a
-  VTK nightly (9.7.20260716 or newer), the button is hidden with older versions:
+- download a PNG screenshot of the 3D view, read back from VTK.wasm in the browser (rendered on
+  the server with `--electron`). With VTK.wasm, this needs a VTK nightly (9.7.20260716 or newer),
+  the button is hidden with older versions:
 
   ```bash
   uv pip install --pre --index-url https://wheels.vtk.org "vtk>=9.7.20260716.dev0"
@@ -65,8 +71,8 @@ and material counts, and a close button to go back to the start page.
 ## Desktop application
 
 The [`electron`](electron/README.md) directory packages the viewer as a standalone desktop app:
-PyInstaller freezes the Python server (with VTK.wasm, so it works offline) and Electron provides the
-native window. `cd electron && npm install && npm run build` builds the installer for the current
+PyInstaller freezes the Python server and Electron provides the native window. The server runs with
+`--electron`: VTK renders on the GPU into a texture Electron shows directly, without VTK.wasm. `cd electron && npm install && npm run build` builds the installer for the current
 platform.
 
 ## Development
