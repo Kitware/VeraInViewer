@@ -1,0 +1,77 @@
+{
+  "name": "vera-in-viewer-desktop",
+  "productName": "VeraInViewer",
+  "version": "1.0.0",
+  "description": "Desktop application for VeraInViewer (trame viewer for VERAin reactor cores, VTK rendering shared with Electron through trame-rca)",
+  "main": "main.js",
+  "author": "Kitware",
+  "license": "BSD-3-Clause",
+  "private": true,
+  "scripts": {
+    "build:server": "uv run --project .. --with pyinstaller python server/build.py",
+    "start": "electron .",
+    "dev": "cross-env VERA_SERVER_DEV=1 electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "build": "npm run build:server && npm run dist"
+  },
+  "devDependencies": {
+    "cross-env": "^10.0.0",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.kitware.vera-in-viewer",
+    "productName": "VeraInViewer",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "resources"
+    },
+    "files": [
+      "main.js",
+      "loading.html",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/koffi/**"
+    ],
+    "extraResources": [
+      {
+        "from": "server/dist/vera-in-viewer-server",
+        "to": "server",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.education"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-${os}-${arch}-setup.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Science"
+    }
+  },
+  "dependencies": {
+    "@kitware/trame-rca-electron": "^0.1.1"
+  }
+}

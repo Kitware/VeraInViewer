@@ -51,6 +51,10 @@ jobs:
     permissions:
       contents: write # push version commit/tag + create GitHub release
       id-token: write # PyPI trusted publishing
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -79,3 +83,54 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.release.outputs.tag }}
+
+  electron:
+    # Build the desktop app on each OS (builds are not cross platform) and attach the
+    # installers to the GitHub release created above.
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    permissions:
+      contents: write # upload release assets
+    defaults:
+      run:
+        shell: bash
+        working-directory: electron
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # No signing identities configured: don't let electron-builder look for one.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: electron/package-lock.json
+
+      - name: Sync app version with the release
+        run: npm version "${{ needs.release.outputs.version }}" --no-git-tag-version --allow-same-version
+
+      - run: npm ci
+      - name: Freeze the trame server (PyInstaller)
+        run: npm run build:server
+      - name: Build installers (electron-builder)
+        run: npm run dist -- --publish never
+
+      - name: Upload installers to GitHub release
+        run: |
+          shopt -s nullglob
+          files=(dist/*.dmg dist/*.zip dist/*.exe dist/*.AppImage dist/*.tar.gz)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No installers found in electron/dist" >&2
+            exit 1
+          fi
+          printf '%s\n' "${files[@]}"
+          gh release upload "${{ needs.release.outputs.tag }}" "${files[@]}" --clobber

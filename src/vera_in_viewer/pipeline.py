@@ -19,6 +19,13 @@ import numpy as np
 from vtkmodules import vtkInteractionStyle, vtkRenderingOpenGL2  # noqa: F401 (object factories)
 from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 from vtkmodules.vtkCommonDataModel import vtkPolyData
+from vtkmodules.vtkInteractionStyle import (
+    vtkCameraManipulator,
+    vtkInteractorStyleManipulator,
+    vtkInteractorStyleTrackballCamera,
+    vtkTrackballPan,
+    vtkTrackballZoom,
+)
 from vtkmodules.vtkRenderingCore import (
     VTK_SURFACE,
     vtkActor,
@@ -124,20 +131,33 @@ class _PinSet:
 
 
 class CoreScene:
-    """Own the render window and keep VTK objects in sync with view settings."""
+    """Own the render window and keep VTK objects in sync with view settings.
 
-    def __init__(self):
+    ``server_interaction`` is for views where the server interactor handles the mouse
+    (trame-rca): the 2D mode then switches the interactor style. Otherwise (VTK.wasm) the
+    interactor style never changes and the server window renders off screen.
+    """
+
+    def __init__(self, server_interaction: bool = False):
+        self.server_interaction = server_interaction
         self.renderer = vtkRenderer()
         self.renderer.GradientBackgroundOn()
         self.renderer.SetBackground(*BACKGROUND)
         self.renderer.SetBackground2(*BACKGROUND_TOP)
         self.render_window = vtkRenderWindow()
         self.render_window.AddRenderer(self.renderer)
-        self.render_window.OffScreenRenderingOn()
+        if not server_interaction:
+            # trame-rca sets up its own off screen buffers
+            self.render_window.OffScreenRenderingOn()
         self.render_window.SetAlphaBitPlanes(1)
         self.interactor = vtkRenderWindowInteractor()
         self.interactor.SetRenderWindow(self.render_window)
-        self.interactor.GetInteractorStyle().SetCurrentStyleToTrackballCamera()
+        if server_interaction:
+            self.style_3d = vtkInteractorStyleTrackballCamera()
+            self.style_2d = self._create_2d_style()
+            self.interactor.SetInteractorStyle(self.style_3d)
+        else:
+            self.interactor.GetInteractorStyle().SetCurrentStyleToTrackballCamera()
         self.view_2d = False
         self.parallel = False
 
@@ -416,17 +436,34 @@ class CoreScene:
         camera.SetParallelProjection(parallel)
         self.renderer.ResetCameraClippingRange()
 
+    @staticmethod
+    def _create_2d_style() -> vtkInteractorStyleManipulator:
+        """Left / middle button: pan, right button and wheel: zoom (see ``view_2d.js``)."""
+        buttons = vtkCameraManipulator.MouseButtonType
+        style = vtkInteractorStyleManipulator()
+        for button in (buttons.Left, buttons.Middle):
+            pan = vtkTrackballPan()
+            pan.SetMouseButton(button)
+            style.AddManipulator(pan)
+        zoom = vtkTrackballZoom()
+        zoom.SetMouseButton(buttons.Right)
+        style.AddManipulator(zoom)
+        return style
+
     def set_2d_mode(self, enabled: bool) -> None:
         """Toggle between the 3D view and a 2D top view using parallel projection.
 
-        The interactor style is left untouched: VTK.wasm ignores interactor
-        style changes and cannot serialize ``vtkInteractorStyleManipulator``.
+        With VTK.wasm the interactor style is left untouched: VTK.wasm ignores
+        interactor style changes and cannot serialize ``vtkInteractorStyleManipulator``.
         In 2D the client remaps the left button to the middle one (pan), see
         ``module/serve/view_2d.js``, so the trackball style only pans and zooms.
+        With ``server_interaction`` the server interactor switches to a pan / zoom style.
         """
         if bool(enabled) == self.view_2d:
             return
         self.view_2d = bool(enabled)
+        if self.server_interaction:
+            self.interactor.SetInteractorStyle(self.style_2d if self.view_2d else self.style_3d)
         self._apply_projection()
         if self.view_2d:
             self._top_view()

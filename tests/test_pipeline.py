@@ -121,6 +121,15 @@ def test_2d_mode(scene):
     assert scene.interactor.GetInteractorStyle() is style  # remapping happens client side
 
 
+def test_2d_mode_server_interaction():
+    scene = CoreScene(server_interaction=True)
+    assert scene.interactor.GetInteractorStyle() is scene.style_3d
+    scene.set_2d_mode(True)
+    assert scene.interactor.GetInteractorStyle() is scene.style_2d
+    scene.set_2d_mode(False)
+    assert scene.interactor.GetInteractorStyle() is scene.style_3d
+
+
 def test_reset_camera_keeps_orientation(scene):
     camera = scene.renderer.GetActiveCamera()
     scene.orient("iso")

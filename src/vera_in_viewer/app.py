@@ -1,4 +1,8 @@
-"""trame application rendering the VERA 3D core with VTK.wasm (trame-vtklocal)."""
+"""trame application rendering the VERA 3D core.
+
+The browser renders the scene with VTK.wasm (trame-vtklocal). With ``--electron``, the
+server renders it instead, into a texture shared with the Electron app (trame-rca).
+"""
 
 from __future__ import annotations
 
@@ -11,11 +15,13 @@ from pathlib import Path
 from packaging.version import Version
 from trame.app import TrameApp
 from trame.app.file_upload import ClientFile
-from trame.decorators import change, controller
+from trame.decorators import change, controller, trigger
 from trame.ui.vuetify4 import VAppLayout
-from trame.widgets import html, vtklocal
+from trame.widgets import html
 from trame.widgets import vuetify4 as v4
 from vtkmodules.vtkCommonCore import vtkVersion
+from vtkmodules.vtkIOImage import vtkPNGWriter
+from vtkmodules.vtkRenderingCore import vtkWindowToImageFilter
 
 from . import module
 from .colors import to_hex
@@ -73,9 +79,20 @@ class VeraInViewer(TrameApp):
             help="VERAin XML file or directory of files to make available",
             default=None,
         )
+        self.server.cli.add_argument(
+            "--electron",
+            action="store_true",
+            help="Render on the server into a texture shared with the Electron app (trame-rca) "
+            "instead of using VTK.wasm. The server must be started by @kitware/trame-rca-electron",
+        )
         args, _ = self.server.cli.parse_known_args()
+        self.electron = args.electron
+        if self.electron:
+            # Must run before any VTK render window is created
+            import trame_rca.electron.vtk  # noqa: F401, PLC0415
 
-        self.scene = CoreScene()
+        self.scene = CoreScene(server_interaction=self.electron)
+        self._rca_view = None  # trame-rca view handler (--electron)
         self.model: CoreModel | None = None
         self.files: dict[str, Path] = {}
         self._sync_time: float | None = None  # set while the client processes an update
@@ -224,7 +241,7 @@ class VeraInViewer(TrameApp):
                 "rendering": "webgl",
                 "view_2d": False,
                 "parallel": False,
-                "can_screenshot": supports_screenshot(),
+                "can_screenshot": self.electron or supports_screenshot(),
                 "slice_items": [],
                 "slice_index": -1,
                 "materials": [],
@@ -331,6 +348,21 @@ class VeraInViewer(TrameApp):
         stem = (self.state.file_name or "vera").split(".")[0]
         self.ctx.view.download_screenshot(f"{stem}.png")
 
+    @trigger("screenshot")
+    def screenshot(self) -> bytes:
+        """The 3D view as PNG content, rendered on the server (``--electron``)."""
+        self.scene.render_window.Render()
+        window_to_image = vtkWindowToImageFilter()
+        window_to_image.SetInput(self.scene.render_window)
+        window_to_image.ShouldRerenderOff()
+        window_to_image.SetInputBufferTypeToRGB()
+        window_to_image.ReadFrontBufferOff()
+        writer = vtkPNGWriter()
+        writer.SetInputConnection(window_to_image.GetOutputPort())
+        writer.WriteToMemoryOn()
+        writer.Write()
+        return bytes(memoryview(writer.GetResult()))
+
     @controller.set("reset_camera")
     def reset_camera(self):
         self.scene.reset_camera()
@@ -362,6 +394,10 @@ class VeraInViewer(TrameApp):
         flight are coalesced and sent once the client reports ``updated``.
         """
         self.state.stats = self.scene.stats()
+        if self._rca_view is not None:
+            # The server renders: no client update to wait for
+            self._rca_view.update()
+            return
         self._sync_camera = self._sync_camera or camera
         if self._sync_time is not None and time.monotonic() - self._sync_time < SYNC_TIMEOUT:
             self._sync_dirty = True
@@ -397,17 +433,7 @@ class VeraInViewer(TrameApp):
                 with v4.VContainer(
                     v_if="loaded", fluid=True, classes="fill-height pa-0", style="position: relative;"
                 ):
-                    vtklocal.LocalView(
-                        self.scene.render_window,
-                        classes="vera-view",
-                        ctx_name="view",
-                        # config is only read on mount: remount the view to switch backend
-                        key=("rendering",),
-                        config=("{ rendering }",),
-                        progress_enabled=True,
-                        end_interaction=(self.on_end_interaction, "[$event]"),
-                        updated=self.on_view_updated,
-                    )
+                    self._build_view()
                     self._build_camera_bar()
                     self._build_side_panels()
 
@@ -421,6 +447,28 @@ class VeraInViewer(TrameApp):
                     click_close="error = null",
                     style="position: absolute; bottom: 1rem; left: 1rem; right: 1rem; z-index: 10;",
                 )
+
+    def _build_view(self) -> None:
+        if self.electron:
+            from trame.widgets import rca  # noqa: PLC0415
+
+            view = rca.RemoteControlledArea(name="view", display="shared-texture", classes="vera-view")
+            self._rca_view = view.create_electron_handler(self.scene.render_window)
+            return
+
+        from trame.widgets import vtklocal  # noqa: PLC0415
+
+        vtklocal.LocalView(
+            self.scene.render_window,
+            classes="vera-view",
+            ctx_name="view",
+            # config is only read on mount: remount the view to switch backend
+            key=("rendering",),
+            config=("{ rendering }",),
+            progress_enabled=True,
+            end_interaction=(self.on_end_interaction, "[$event]"),
+            updated=self.on_view_updated,
+        )
 
     def _build_landing(self) -> None:
         """Full screen drop zone over a rendering of a reactor core."""
@@ -589,6 +637,8 @@ class VeraInViewer(TrameApp):
                     (24, "mdi-circle-outline"),
                 ):
                     v4.VBtn(icon=icon, value=(value,), size="small", title=f"Resolution {value}")
+            if self.electron:
+                return  # rendered on the server: no WebGL / WebGPU choice
             v4.VDivider(vertical=True, classes="mx-4 my-2")
             with v4.VBtnToggle(
                 v_model=("rendering",),
@@ -676,7 +726,12 @@ class VeraInViewer(TrameApp):
                         size="small",
                         classes="rounded",
                         variant="text",
-                        click=self.ctrl.download_screenshot,
+                        click=(
+                            "utils.download(`${(file_name || 'vera').split('.')[0]}.png`,"
+                            " trigger('screenshot'), 'image/png')"
+                            if self.electron
+                            else self.ctrl.download_screenshot
+                        ),
                         title="Download a screenshot (PNG)",
                     )
 

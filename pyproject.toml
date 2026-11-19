@@ -23,6 +23,7 @@ dependencies = [
     "numpy>=1.26",
     "packaging>=23",
     "trame>=3.12",
+    "trame-rca>=2.12.0",
     "trame-vtklocal>=1.7.1",
     "trame-vuetify>=3.3.0",
     "vtk>=9.7",
