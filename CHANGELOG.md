@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.1 (2026-11-19)
+
+### Bug Fixes
+
+- **electron**: Get CI publish bundles properly
+  ([`b48cdb4`](https://github.com/Kitware/VeraInViewer/commit/b48cdb4476ab8a65ef2f1053841e339689803a9f))
+
+
 ## v1.1.0 (2026-11-19)
 
 ### Continuous Integration
